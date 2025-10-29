@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     )
   `;
 
-  await sql`INSERT INTO users (name, email, password) VALUES ('John Doe', 'doe@example.com', 'password123')`;
+  await sql`INSERT INTO users (name, email, password) VALUES ('Ali Noureldin', 'alin@example.com', '123456') ON CONFLICT (email) DO NOTHING`;
 
   // For example, fetch data from your DB here
   const users = await sql`SELECT * FROM users`;

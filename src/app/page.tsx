@@ -1,8 +1,27 @@
+"use client";
 import Image from "next/image";
+import { useEffect } from "react";
 
 export default function Home() {
+  const createUser = async () => {
+    await fetch("/api");
+  };
+
+  useEffect(() => {
+    fetch("/api/users")
+      .then((res) => res.json())
+      .then((data) => {});
+  }, []);
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
+      <button
+        onClick={() => {
+          createUser();
+        }}
+      >
+        Create User
+      </button>
       <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
         <Image
           className="dark:invert"
