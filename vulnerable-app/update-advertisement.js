@@ -6,7 +6,11 @@ IDOR Vulnerability:
 
 SQL Injection:
 - This function is vulnerable to SQL injection attacks because it directly interpolates user input into the SQL query string.
-- Impact: An attacker could manipulate the query by injecting malicious SQL code, potentially gaining unauthorized access to or modifying data.
+- Impact: An attacker could manipulate the query by injecting malicious SQL code, potentially gaining unauthorized access or modifying data.
+
+CSRF Vulnerability:
+- This function does not implement any CSRF protection mechanisms.
+- Impact: An attacker could trick an authenticated user into making unwanted changes to advertisements without their consent.
 -----------------------------------------------------------------------------*/
 app.patch("/advertisements/:id", authMiddleware, (req, res) => {
   const adId = req.params.id;

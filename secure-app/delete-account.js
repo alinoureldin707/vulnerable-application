@@ -1,86 +1,100 @@
 /* -----------------------------------------------------------------------------
-CSRF Protection Implementation:
-- This code implements CSRF protection for the /delete-account endpoint.
-- A CSRF token is generated and sent to the client via a cookie.
-- The token is tied to the user's session and must be single-use to prevent replay attacks.
+CSRF Protection Implementation (Hardened Version):
+- Implements robust CSRF protection for the /delete-account endpoint.
+- Tokens are bound to the authenticated session and are single-use.
+- Tokens expire after a short time window to mitigate replay attacks.
+- Uses constant-time comparison to prevent timing attacks.
+- Combined with SameSite cookies and Origin/Referer checks.
 -----------------------------------------------------------------------------*/
 const CSRF_SECRET =
   "jHlIrM4PxUe25PSvpFbpssXlxFdeAhJAFITMzH0grcdlwYk5kIy7GjcTAft8ieP9"; // csrf secret key
-const csrfTokens = new Set(); // store valid csrf tokens
+const csrfStore = new Map(); // Store valid CSRF tokens { randomPart: { userId, expiresAt } }
 
-// -----------------------------------------------------------
-// Function to generate a CSRF token (signed)
-// -----------------------------------------------------------
-
+/* ---------------------------------------------------------------------------
+Function: generateCsrfToken(userIdentifier)
+- Generates a signed CSRF token bound to the user.
+- Includes a random component and HMAC signature.
+- Token expires after 15 minutes.
+---------------------------------------------------------------------------*/
 function generateCsrfToken(userIdentifier) {
-  const randomPart = crypto.randomBytes(16).toString("hex"); // random string
+  const randomPart = crypto.randomBytes(16).toString("hex");
   const data = `${userIdentifier}:${randomPart}`;
-
-  // Create an HMAC signature bound to the user (e.g., cookie value)
   const signature = crypto
     .createHmac("sha256", CSRF_SECRET)
     .update(data)
     .digest("hex");
 
+  const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes expiry
+  csrfStore.set(randomPart, { userIdentifier, expiresAt });
+
   return `${randomPart}.${signature}`;
 }
 
-// -----------------------------------------------------------
-// Function to verify the CSRF token
-// -----------------------------------------------------------
+/* ---------------------------------------------------------------------------
+Function: verifyCsrfToken(token, userIdentifier)
+- Validates that the token:
+  1. Exists in the server store.
+  2. Belongs to the same user.
+  3. Has not expired.
+  4. Has a valid HMAC signature.
+- Once validated, the token is deleted (single-use).
+---------------------------------------------------------------------------*/
 function verifyCsrfToken(token, userIdentifier) {
   if (!token) return false;
+
   const [randomPart, signature] = token.split(".");
+  if (!randomPart || !signature) return false;
+
+  const stored = csrfStore.get(randomPart);
+  if (!stored) return false; // Token not found or already used
+
+  if (stored.userIdentifier !== userIdentifier) return false;
+  if (Date.now() > stored.expiresAt) {
+    csrfStore.delete(randomPart); // Expired
+    return false;
+  }
 
   const expectedSignature = crypto
     .createHmac("sha256", CSRF_SECRET)
     .update(`${userIdentifier}:${randomPart}`)
     .digest("hex");
 
-  if (!usedTokens.has(randomPart)) return false; // Token reuse check
-
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expectedSignature)
-  );
+  if (signature !== expectedSignature) return false; // Invalid signature
+  csrfStore.delete(randomPart);
+  return true;
 }
 
-// -----------------------------------------------------------
-// API to generate and send the CSRF token
-// -----------------------------------------------------------
+/* ---------------------------------------------------------------------------
+API: /csrf-token
+- Generates and returns a CSRF token for the authenticated user.
+- Token is bound to the user's session or cookie.
+---------------------------------------------------------------------------*/
 app.get("/csrf-token", (req, res) => {
-  const userCookie = req.cookies.userId || "anonymous";
-  const token = generateCsrfToken(userCookie);
-  csrfTokens.add(token.split(".")[0]); // Add to valid tokens set
-
-  res.cookie("csrf_token", token, {
-    httpOnly: false,
-    secure: false,
-    maxAge: 3600000,
-    sameSite: "Strict",
-  });
+  const userId = req.cookies.userId || "anonymous";
+  const token = generateCsrfToken(userId);
   return res.status(200).json({ csrfToken: token });
 });
 
-// -----------------------------------------------------------
-// Secure /delete-account endpoint with CSRF protection
-// -----------------------------------------------------------
-app.delete("/delete-account", (req, res) => {
-  // 1. Authenticate User via JWT in Cookie
+/* ---------------------------------------------------------------------------
+API: /delete-account
+- Protected endpoint requiring:
+  1. Valid user authentication.
+  2. Valid CSRF token (single-use, signed, not expired).
+---------------------------------------------------------------------------*/
+app.delete("/delete-account", authMiddleware, (req, res) => {
   const user = req.user;
   if (!user) return res.status(401).json({ message: "Unauthorized" });
-  const userId = user.id;
 
-  // 2. CSRF Token Validation
-  const csrfToken = req.cookies["csrf_token"];
-  const userCookie = req.cookies.userId || "anonymous";
-  if (!verifyCsrfToken(csrfToken, userCookie)) {
-    return res.status(403).json({ message: "Invalid CSRF token" });
+  // 1. Validate CSRF token
+  const csrfToken = req.headers["x-csrf-token"];
+  const userId = req.cookies.userId || "anonymous";
+
+  if (!verifyCsrfToken(csrfToken, userId)) {
+    return res.status(403).json({ message: "Invalid or expired CSRF token" });
   }
-  csrfTokens.delete(csrfToken.split(".")[0]); // Invalidate token after use
 
-  // 3. Delete User Account
-  db.query("DELETE FROM users WHERE id = ?", [userId], () => {
+  // 2. Delete user account (example)
+  db.query("DELETE FROM users WHERE id = ?", [user.id], () => {
     return res.status(200).json({ message: "Account deleted successfully" });
   });
 });

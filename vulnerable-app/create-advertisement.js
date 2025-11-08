@@ -3,21 +3,26 @@ Persistent XSS Vulnerability:
 - The /advertisements endpoint returns user-generated content without proper sanitization or encoding.
 - An attacker can exploit this by submitting a malicious advertisement containing a script.
 - Example: Submitting an advertisement with the title "<script>alert('XSS')</script>" will execute the alert when the ad is viewed.
+
+
 -----------------------------------------------------------------------------*/
-app.post("/create-advertisement", (req, res) => {
+app.post("/create-advertisement", authMiddleware, (req, res) => {
+  const user = req.user;
+  if (!user) return res.status(401).json({ message: "Unauthorized" });
+
   const { title, description } = req.body;
   if (!title || !description)
     return res.status(400).json({ message: "Missing title or description" });
 
   // ISSUE: Persistent XSS Vulnerability - unsanitized user input
-  adsDb.push({ title, description });
+  adsDb.push({ title, description, userId: user.id });
   return res
     .status(201)
     .json({ message: "Advertisement created successfully" });
 });
 
 /* -----------------------------------------------------------------------------
-Persistent XSS Impact Exploit Example:
+Persistent XSS Exploit Example:
 - An attacker can exploit the persistent XSS vulnerability in the /advertisements endpoint
 - by submitting a malicious advertisement containing a script.
 - Example: By creating an advertisement with the title "<script>alert('XSS')</script>",
@@ -32,6 +37,7 @@ fetch("/create-advertisement", {
     title: "<script>alert('XSS')</script>",
     description: "This is a malicious advertisement.",
   }),
+  credentials: "include",
 });
 
 // Victim views the advertisements, triggering the XSS

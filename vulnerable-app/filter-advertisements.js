@@ -14,7 +14,7 @@ app.get("/filter-advertisements", (req, res) => {
     (ad) => ad.type.toLowerCase() === filterType.toLowerCase()
   );
 
-  // 3. *** VULNERABILITY HERE: UNSAFE REFLECTION ***
+  // 3. ISSUE: UNSAFE REFLECTION
   // The raw, unsanitized 'filterType' is injected directly into the HTML response
   // without encoding, allowing any script tag within 'filterType' to execute.
   const htmlResponse = `
@@ -30,7 +30,7 @@ app.get("/filter-advertisements", (req, res) => {
 });
 
 /* -----------------------------------------------------------------------------
-Reflected XSS Impact Exploit Example:
+Reflected XSS Exploit Example:
 - An attacker can exploit the reflected XSS vulnerability in the /filter-advertisements endpoint
 - by crafting a malicious URL that includes a script in the 'type' parameter.
 - Example: By visiting /filter-advertisements?type=<script>alert('XSS')</script>, the attacker can execute arbitrary JavaScript in the victim's browser.

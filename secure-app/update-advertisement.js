@@ -3,11 +3,21 @@ IDOR Vulnerability Fix:
 - Ensures that users can only update advertisements they own.
 - Checks ownership before allowing updates.
 - Uses parameterized queries to prevent SQL injection.
+
+CSRF Protection:
+- Implements CSRF token verification to protect against CSRF attacks.
 -----------------------------------------------------------------------------*/
 app.patch("/advertisements/:id", authMiddleware, (req, res) => {
   const adId = req.params.id;
   const { title, description } = req.body;
   const userId = req.user.userId;
+
+  // CSRF Protection could be added here as well
+  const csrfToken = req.headers["x-csrf-token"];
+
+  if (!verifyCsrfToken(csrfToken, userId)) {
+    return res.status(403).json({ message: "Invalid or expired CSRF token" });
+  }
 
   // FIX: Verify ownership before allowing update
   const sqlQuery = "SELECT * FROM advertisements WHERE id = ? AND owner_id = ?";
@@ -29,8 +39,7 @@ app.patch("/advertisements/:id", authMiddleware, (req, res) => {
 
 /*-----------------------------------------------------------------------------
 IDOR Protection example:
-- An attacker attempts to exploit the IDOR vulnerability in the /advertisements/:id endpoint
-- by sending a request to update an advertisement they do not own.
+- An attacker attempts to exploit the IDOR vulnerability in the /advertisements/:id endpoint by sending a request to update an advertisement they do not own.
 - However, due to the ownership check, the request is denied with a 403 Forbidden response.
 -----------------------------------------------------------------------------*/
 fetch("/advertisements/123", {

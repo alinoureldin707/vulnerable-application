@@ -18,7 +18,7 @@ app.get("/search-advertisements", (req, res) => {
 });
 
 /* -----------------------------------------------------------------------------
-SQL Injection Impact Exploit Example:
+SQL Injection Exploit Example:
 - An attacker can exploit the SQL injection vulnerability in the /search-advertisements endpoint
 - by crafting a malicious input that alters the SQL query logic.
 - Example: By setting the query parameter to "'; DROP TABLE advertisements; --", the attacker can terminate the original query and execute a destructive command.

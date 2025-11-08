@@ -4,8 +4,8 @@ CSRF Vulnerability:
 - An attacker can exploit this by tricking an authenticated user into visiting a malicious website that makes a request to this endpoint.
 
 SQL Injection Vulnerability:
-- The endpoint constructs the SQL query using string concatenation with user-controlled data (user ID from JWT).
-- An attacker who can manipulate the JWT (e.g., via a weak secret) can inject malicious SQL code to delete other users' accounts.
+- The endpoint constructs the SQL query using string concatenation.
+- An attacker can inject malicious SQL code like `'; DROP TABLE users;--` to delete the entire users table.
 -----------------------------------------------------------------------------*/
 app.delete("/delete-account", authMiddleware, (req, res) => {
   // 1. Authenticate User via JWT in Cookie

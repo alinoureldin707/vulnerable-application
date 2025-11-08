@@ -4,6 +4,10 @@ Upload File Vulnerability:
 - Files are stored in a public directory, potentially allowing execution of malicious files.
 - No checks on file type, size, or content.
 - Uploaded file paths and names are stored in the database without sanitization.
+
+CSRF Vulnerability:
+- The /upload-profile-picture endpoint does not implement any CSRF protection mechanisms.
+- Impact: An attacker could trick an authenticated user into uploading unwanted files without their consent.
 -----------------------------------------------------------------------------*/
 const UPLOAD_DIR = path.resolve(__dirname, "uploads");
 

@@ -12,7 +12,10 @@ const htmlEncode = (str) =>
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 
-app.post("/create-advertisement", (req, res) => {
+app.post("/create-advertisement", authMiddleware, (req, res) => {
+  const user = req.user;
+  if (!user) return res.status(401).json({ message: "Unauthorized" });
+
   const { title, description } = req.body;
   if (!title || !description)
     return res.status(400).json({ message: "Missing title or description" });
@@ -20,7 +23,11 @@ app.post("/create-advertisement", (req, res) => {
   // FIX: Sanitize user input before storing it
   const safeTitle = htmlEncode(title);
   const safeDescription = htmlEncode(description);
-  adsDb.push({ title: safeTitle, description: safeDescription });
+  adsDb.push({
+    title: safeTitle,
+    description: safeDescription,
+    userId: user.id,
+  });
   return res
     .status(201)
     .json({ message: "Advertisement created successfully" });
@@ -38,6 +45,7 @@ fetch("/create-advertisement", {
     title: "<script>alert('XSS')</script>",
     description: "This is a malicious advertisement.",
   }),
+  credentials: "include",
 });
 fetch("/advertisements", {
   method: "GET",
